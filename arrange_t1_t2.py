@@ -1,43 +1,61 @@
 import os
 import shutil
+from pathlib import Path
 
-t1_folder = "/Users/enke/Desktop/pix2pix_t1_t2/t1"
-t2_folder = "/Users/enke/Desktop/pix2pix_t1_t2/t2"
+# Base directories
+base_dir = "/Users/enke/Desktop/pix2pix_t1_t2"
+t1_dir = os.path.join(base_dir, "t1")
+t2_dir = os.path.join(base_dir, "t2")
 
-t1_new = "/Users/enke/Desktop/pix2pix_t1_t2/t1_new"
-t2_new = "/Users/enke/Desktop/pix2pix_t1_t2/t2_new"
-os.makedirs(t1_new, exist_ok=True)
-os.makedirs(t2_new, exist_ok=True)
+# Output directories
+output_t1_dir = os.path.join(base_dir, "t1_new")
+output_t2_dir = os.path.join(base_dir, "t2_new")
 
-# Unterordner beider Ordner
-t1_subfolders = set([f for f in os.listdir(t1_folder) if os.path.isdir(os.path.join(t1_folder, f))])
-t2_subfolders = set([f for f in os.listdir(t2_folder) if os.path.isdir(os.path.join(t2_folder, f))])
+# Create output directories if they don't exist
+os.makedirs(output_t1_dir, exist_ok=True)
+os.makedirs(output_t2_dir, exist_ok=True)
 
-# Gemeinsame Unterordner
-common_subfolders = t1_subfolders & t2_subfolders
-print(f"Gemeinsame Unterordner: {common_subfolders}")
+def find_nifti_files(root_dir):
+    """Find all NIfTI files in subdirectories of root_dir."""
+    nifti_files = {}
+    for dirpath, _, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if filename.endswith('.nii') or filename.endswith('.nii.gz'):
+                # Extract the folder name (e.g., '3698063' from the path)
+                folder_name = os.path.basename(os.path.dirname(dirpath))
+                if folder_name not in nifti_files:
+                    nifti_files[folder_name] = []
+                nifti_files[folder_name].append(os.path.join(dirpath, filename))
+    return nifti_files
 
-def copy_nii_recursive(src_folder, dst_folder, allowed_subfolders):
-    copied_files = []
-    for subfolder_name in os.listdir(src_folder):
-        if subfolder_name not in allowed_subfolders:
-            continue
-        full_subfolder = os.path.join(src_folder, subfolder_name)
-        # rekursiv alle Dateien durchgehen
-        for root, dirs, files in os.walk(full_subfolder):
-            for f in files:
-                if f.endswith(".nii") or f.endswith(".nii.gz"):
-                    src_path = os.path.join(root, f)
-                    dst_path = os.path.join(dst_folder, f)
-                    shutil.copy2(src_path, dst_path)
-                    copied_files.append(f)
-    return copied_files
+# Find all NIfTI files in both T1 and T2 directories
+t1_files = find_nifti_files(t1_dir)
+t2_files = find_nifti_files(t2_dir)
 
-t1_files = copy_nii_recursive(t1_folder, t1_new, common_subfolders)
-t2_files = copy_nii_recursive(t2_folder, t2_new, common_subfolders)
+# Find common folder names that exist in both T1 and T2
+common_folders = set(t1_files.keys()) & set(t2_files.keys())
 
-print(f"T1 Dateien kopiert: {len(t1_files)}")
-print(f"T2 Dateien kopiert: {len(t2_files)}")
+# Process each pair
+for folder in common_folders:
+    # Get the first NIfTI file from each folder (assuming one per folder)
+    if t1_files[folder] and t2_files[folder]:
+        t1_path = t1_files[folder][0]  # Take first file if multiple
+        t2_path = t2_files[folder][0]  # Take first file if multiple
+        
+        # Create new filenames
+        t1_new_name = f"t1_{folder}.nii.gz"
+        t2_new_name = f"t2_{folder}.nii.gz"
+        
+        # Copy files to new directories with consistent naming
+        shutil.copy2(t1_path, os.path.join(output_t1_dir, t1_new_name))
+        shutil.copy2(t2_path, os.path.join(output_t2_dir, t2_new_name))
+        
+        print(f"Processed pair: {t1_new_name} <-> {t2_new_name}")
+
+print("\nProcessing complete!")
+print(f"Found {len(common_folders)} matching T1-T2 pairs.")
+print(f"T1 files saved to: {output_t1_dir}")
+print(f"T2 files saved to: {output_t2_dir}")
 
 
 

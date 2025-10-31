@@ -12,5 +12,5 @@ echo "Training gestartet."
 #  --name facades_pix2pix \
 #  --model pix2pix \
 #  --direction BtoA
-#echo "Test abgeschlossen. Ergebnisse in ./results/facades_pix2pix/test_latest/"
+echo "Test abgeschlossen. Ergebnisse in ./results/facades_pix2pix/test_latest/"
 
